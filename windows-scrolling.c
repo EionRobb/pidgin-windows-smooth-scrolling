@@ -21,11 +21,8 @@
 
 #include "pidgin.h"
 
-#include "gtkconv.h"
 #include "gtkplugin.h"
-#include "gtkimhtml.h"
-
-#include "purple.h"
+#include "debug.h"
 
 #include <windows.h>
 #include <gdk/gdkwin32.h>
@@ -35,6 +32,12 @@
 #	define WM_MOUSEWHEEL 0x020A
 #endif
 
+// mingw doens't provide this on older versions, so recreate it in a non-conflicting way
+typedef struct {
+  MOUSEHOOKSTRUCT MOUSEHOOKSTRUCT;
+  DWORD           mouseData;
+} MouseHookStructEx;
+
 static HHOOK hhHook = NULL;
 
 static LRESULT CALLBACK 
@@ -42,11 +45,11 @@ win32_scroll_event_handler(int nCode, WPARAM wparam, LPARAM lparam)
 {
 	if(nCode == HC_ACTION) {
 		if (wparam == WM_MOUSEWHEEL) {
-			MSLLHOOKSTRUCT *pdata = (MSLLHOOKSTRUCT *) lparam;
+			MouseHookStructEx *pdata = (MouseHookStructEx *) lparam;
 			short scroll_delta = (short) HIWORD(pdata->mouseData);
 			HWND hwnd;
 
-			if ((hwnd = WindowFromPoint(pdata->pt)) != NULL)
+			if ((hwnd = WindowFromPoint(pdata->MOUSEHOOKSTRUCT.pt)) != NULL)
 			{
 				GdkWindow *new_window = gdk_win32_handle_table_lookup((GdkNativeWindow) hwnd);
 				gpointer userdata = NULL;
@@ -68,7 +71,7 @@ win32_scroll_event_handler(int nCode, WPARAM wparam, LPARAM lparam)
 							GtkTreeView *tree_view = GTK_TREE_VIEW(widget);
 							adj = gtk_tree_view_get_vadjustment(tree_view);
 						} else {
-							g_object_get(widget, "vadjustment", &adj);
+							g_object_get(widget, "vadjustment", &adj, NULL);
 							g_object_unref(adj);
 						}
 					}
@@ -92,11 +95,9 @@ win32_scroll_event_handler(int nCode, WPARAM wparam, LPARAM lparam)
 static gboolean
 plugin_load(PurplePlugin *plugin)
 {
-	WNDCLASSEXW wcex;
 	DWORD lasterror;
-	GList *list;
 	
-	hhHook = SetWindowsHookEx(WH_MOUSE_LL, win32_scroll_event_handler, winpidgin_exe_hinstance(), 0);
+	hhHook = SetWindowsHookEx(WH_MOUSE, win32_scroll_event_handler, winpidgin_exe_hinstance(), GetCurrentThreadId());
 	lasterror = GetLastError();
 	if (lasterror)
 		purple_debug_error("win7", "SetWindowsHookEx error %d\n", (int) lasterror);
@@ -119,21 +120,21 @@ plugin_unload(PurplePlugin *plugin)
 static PurplePluginInfo info =
 {
 	PURPLE_PLUGIN_MAGIC,
-	PURPLE_MAJOR_VERSION,                           /**< major version */
-	PURPLE_MINOR_VERSION,                           /**< minor version */
+	2,                                              /**< major version */
+	1,                                              /**< minor version */
 	PURPLE_PLUGIN_STANDARD,                         /**< type */
 	PIDGIN_PLUGIN_TYPE,                             /**< ui_requirement */
 	0,                                              /**< flags */
 	NULL,                                           /**< dependencies */
 	PURPLE_PRIORITY_DEFAULT,                        /**< priority */
 
-	"gtk-win32-scrolling",                                /**< id */
-	N_("Windows Smooth Scrolling"),                              /**< name */
-	"0.1",                                /**< version */
-	N_("Windows Smooth Scrolling."),         /**< summary */
-	N_("Allows smooth scrolling with trackpads on Windows."),    /**< description */
-	"",              /**< author */
-	"",                                 /**< homepage */
+	"gtk-win32-scrolling",                          /**< id */
+	N_("Windows Smooth Scrolling"),                 /**< name */
+	"1.0",                                          /**< version */
+	N_("Windows Smooth Scrolling."),                /**< summary */
+	N_("Allows smooth scrolling with trackpads on Windows."),/**< description */
+	"Eion Robb <eion@robbmob.com>",                 /**< author */
+	"",                                             /**< homepage */
 	plugin_load,                                    /**< load */
 	plugin_unload,                                  /**< unload */
 	NULL,                                           /**< destroy */
