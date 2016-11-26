@@ -1,3 +1,21 @@
+/**
+ *   Pidgin Win32 Smooth Scrolling
+ *   Allows fine-grain control of scrolling in Pidgin, eg when using a trackpad
+ *   Copyright (C) 2016  Eion Robb
+ *
+ *   This program is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #define PURPLE_PLUGINS
 
@@ -41,11 +59,17 @@ win32_scroll_event_handler(int nCode, WPARAM wparam, LPARAM lparam)
 						widget = userdata;
 						
 						if (GTK_IS_TEXT_VIEW(widget)) {
-							GtkTextView *textview = GTK_TEXT_VIEW(widget);
-							adj = textview->vadjustment;
+							GtkTextView *text_view = GTK_TEXT_VIEW(widget);
+							adj = text_view->vadjustment;
 						} else if (GTK_IS_SCROLLED_WINDOW(widget)) {
 							GtkScrolledWindow *scrolled_window = GTK_SCROLLED_WINDOW(widget);
 							adj = gtk_scrolled_window_get_vadjustment(scrolled_window);
+						} else if (GTK_IS_TREE_VIEW(widget)) {
+							GtkTreeView *tree_view = GTK_TREE_VIEW(widget);
+							adj = gtk_tree_view_get_vadjustment(tree_view);
+						} else {
+							g_object_get(widget, "vadjustment", &adj);
+							g_object_unref(adj);
 						}
 					}
 				}
@@ -105,7 +129,7 @@ static PurplePluginInfo info =
 
 	"gtk-win32-scrolling",                                /**< id */
 	N_("Windows Smooth Scrolling"),                              /**< name */
-	"0.0",                                /**< version */
+	"0.1",                                /**< version */
 	N_("Windows Smooth Scrolling."),         /**< summary */
 	N_("Allows smooth scrolling with trackpads on Windows."),    /**< description */
 	"",              /**< author */
